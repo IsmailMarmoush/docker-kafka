@@ -23,6 +23,7 @@ zookeeper(){
     docker run -it \
         --network="$NETWORK" \
         -e ZOO_MY_ID=$id \
+        --label zookeeper_id=$id \
         -e ZOO_SERVERS="server.$id=0.0.0.0:2888:3888 $(get_zk_hosts $zookeeper_image :2888:3888)" \
         zookeeper
 }
@@ -62,7 +63,7 @@ docker_network(){
 get_hosts(){
     local image_ancestor=$1
     local append=$2
-    local hosts=$(get_container_name $image_ancestor | get_container_ips | sed "s/$/$append,/")
+    local hosts=$(get_container_name $image_ancestor | get_containers_ips | sed "s/$/$append,/")
     hosts=$(echo $hosts | sed -e "s/\s//" -e "s/,$//")
     echo $hosts
 }
@@ -70,17 +71,25 @@ get_hosts(){
 get_zk_hosts(){
     local image_ancestor=$1
     local append=$2
-    local hosts=($(get_container_name $image_ancestor | get_container_ips | sed "s/$/$append/"))
+    local hosts=($(get_container_name $image_ancestor | get_containers_ips | sed "s/$/$append/"))
     result=()
     for idx in "${!hosts[@]}";
     do
-        result+=("server.$idx=${hosts[idx]}")
+        local zookeeper_id=$(get_container_label zookeeper zookeeper_id)
+        result+=("server.$zookeer_id=${hosts[idx]}")
+        #result+=("server.$idx=${hosts[idx]}")
     done
     echo "${result[@]}"
 }
 
+get_container_label(){
+    local image_ancestor=$1
+    local container=$(get_container_name $image_ancestor)
+    label=$2
+    docker inspect --format "{{ index .Config.Labels \"$label\"}}" $container
+}
 
-get_container_ips(){
+get_containers_ips(){
     while read input; do
         docker inspect --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $input
     done
