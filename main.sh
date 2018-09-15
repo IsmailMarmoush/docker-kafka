@@ -22,13 +22,13 @@ zookeeper(){
     set -x
     docker run -it \
         --network="$NETWORK" \
-        -e ZOO_MY_ID=$id
-        -e ZOO_SERVERS="$(get_zk_hosts $zookeeper_image $zookeeper_port)" \
+        -e ZOO_MY_ID=$id \
+        -e ZOO_SERVERS="server.$id=0.0.0.0:2888:3888 $(get_zk_hosts $zookeeper_image :2888:3888)" \
         zookeeper
 }
 
 kafka(){
-    hosts=$(get_hosts $zookeeper_image ":2888:3888")
+    hosts=$(get_hosts $zookeeper_image ":$zookeeper_port")
     id=$(( ( RANDOM % 10 )  + 1 ))
     set -x
     docker run -it \
