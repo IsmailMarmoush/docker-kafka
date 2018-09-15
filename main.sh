@@ -76,7 +76,7 @@ get_zk_hosts(){
     for idx in "${!hosts[@]}";
     do
         local zookeeper_id=$(get_container_label zookeeper zookeeper_id)
-        result+=("server.$zookeer_id=${hosts[idx]}")
+        result+=("server.$zookeeper_id=${hosts[idx]}")
         #result+=("server.$idx=${hosts[idx]}")
     done
     echo "${result[@]}"
