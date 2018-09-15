@@ -18,17 +18,19 @@ bash(){
 
 zookeeper(){
     #  ZOO_SERVERS: server.1=zoo1:2888:3888 server.2=zoo2:2888:3888 server.3=0.0.0.0:2888:3888
-
+    id=$(( ( RANDOM % 10 )  + 1 ))
+    set -x
     docker run -it \
         --network="$NETWORK" \
-        -e ZOO_SERVERS="hosts"
+        -e ZOO_MY_ID=$id
+        -e ZOO_SERVERS="$(get_zk_hosts $zookeeper_image $zookeeper_port)" \
         zookeeper
 }
 
 kafka(){
-    hosts=$(get_hosts $zookeeper_image $zookeeper_port)
+    hosts=$(get_hosts $zookeeper_image ":2888:3888")
     id=$(( ( RANDOM % 10 )  + 1 ))
-    echo "id: $id"
+    set -x
     docker run -it \
         --network="$NETWORK" \
         $kafka_image \
@@ -39,12 +41,12 @@ kafka(){
 }
 
 kafka_producer(){
-    hosts=$(get_hosts $kafka_image $kafka_port)
+    hosts=$(get_hosts $kafka_image ":$kafka_port")
     docker exec -it $name bash -c "/kafka/bin/kafka-console-producer.sh --broker-list $hosts --topic test"
 }
 
 kafka_consumer(){
-    hosts=$(get_hosts $zookeeper_image $zookeeper_port)
+    hosts=$(get_hosts $zookeeper_image ":$zookeeper_port")
     docker exec -it $name bash -c "/kafka/bin/kafka-console-consumer.sh --bootstrap-server $hosts --topic test --from-beginning"
 }
 
@@ -59,24 +61,22 @@ docker_network(){
 
 get_hosts(){
     local image_ancestor=$1
-    local port=$2
-    local hosts=$(get_container_name $image_ancestor | get_container_ips | sed "s/$/:$port,/")
+    local append=$2
+    local hosts=$(get_container_name $image_ancestor | get_container_ips | sed "s/$/$append,/")
     hosts=$(echo $hosts | sed -e "s/\s//" -e "s/,$//")
     echo $hosts
 }
 
 get_zk_hosts(){
     local image_ancestor=$1
-    local port=$2
-    local hosts=($(get_container_name $image_ancestor | get_container_ips | sed "s/$/:$port/"))
+    local append=$2
+    local hosts=($(get_container_name $image_ancestor | get_container_ips | sed "s/$/$append/"))
     result=()
     for idx in "${!hosts[@]}";
     do
         result+=("server.$idx=${hosts[idx]}")
     done
     echo "${result[@]}"
-    #hosts=$(echo $hosts | sed -e "s/\s//" -e "s/,$//")
-    #echo $hosts
 }
 
 
