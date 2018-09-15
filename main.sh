@@ -17,8 +17,11 @@ bash(){
 }
 
 zookeeper(){
+    #  ZOO_SERVERS: server.1=zoo1:2888:3888 server.2=zoo2:2888:3888 server.3=0.0.0.0:2888:3888
+
     docker run -it \
         --network="$NETWORK" \
+        -e ZOO_SERVERS="hosts"
         zookeeper
 }
 
@@ -55,12 +58,27 @@ docker_network(){
 }
 
 get_hosts(){
-    image_ancestor=$1
-    port=$2
-    hosts=$(get_container_name $image_ancestor | get_container_ips | sed "s/$/:$port,/")
+    local image_ancestor=$1
+    local port=$2
+    local hosts=$(get_container_name $image_ancestor | get_container_ips | sed "s/$/:$port,/")
     hosts=$(echo $hosts | sed -e "s/\s//" -e "s/,$//")
     echo $hosts
 }
+
+get_zk_hosts(){
+    local image_ancestor=$1
+    local port=$2
+    local hosts=($(get_container_name $image_ancestor | get_container_ips | sed "s/$/:$port/"))
+    result=()
+    for idx in "${!hosts[@]}";
+    do
+        result+=("server.$idx=${hosts[idx]}")
+    done
+    echo "${result[@]}"
+    #hosts=$(echo $hosts | sed -e "s/\s//" -e "s/,$//")
+    #echo $hosts
+}
+
 
 get_container_ips(){
     while read input; do
