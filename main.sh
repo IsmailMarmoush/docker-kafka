@@ -57,12 +57,12 @@ docker_network(){
 get_hosts(){
     image_ancestor=$1
     port=$2
-    hosts=$(get_container_name $image_ancestor | get_container_ip | sed "s/$/:$port,/")
+    hosts=$(get_container_name $image_ancestor | get_container_ips | sed "s/$/:$port,/")
     hosts=$(echo $hosts | sed -e "s/\s//" -e "s/,$//")
     echo $hosts
 }
 
-get_container_ip(){
+get_container_ips(){
     while read input; do
         docker inspect --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $input
     done
