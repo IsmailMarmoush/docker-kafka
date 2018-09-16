@@ -6,7 +6,8 @@ kafka_port=9092
 kafka_image=ismailmarmoush/kafka
 
 zookeeper_port=2181
-zookeeper_image=zookeeper
+zookeeper_image=zookeeper:3.5
+zookeeper_id_label=zookeeper_id
 
 build(){
     docker build -t $kafka_image .
@@ -23,13 +24,14 @@ zookeeper(){
     docker run -it \
         --network="$NETWORK" \
         -e ZOO_MY_ID=$id \
-        --label zookeeper_id=$id \
-        -e ZOO_SERVERS="server.$id=0.0.0.0:2888:3888 $(get_zk_hosts $zookeeper_image :2888:3888)" \
-        zookeeper
+        --label $zookeeper_id_label=$id \
+        -e ZOO_SERVERS="server.$id=0.0.0.0:2888:3888 $(zk_hosts $zookeeper_image :2888:3888)" \
+        -e ZOO_STANDALONE_ENABLED=false \
+        $zookeeper_image
 }
 
 kafka(){
-    hosts=$(get_hosts $zookeeper_image ":$zookeeper_port")
+    hosts=$(hosts $zookeeper_image ":$zookeeper_port")
     id=$(( ( RANDOM % 10 )  + 1 ))
     set -x
     docker run -it \
@@ -42,12 +44,12 @@ kafka(){
 }
 
 kafka_producer(){
-    hosts=$(get_hosts $kafka_image ":$kafka_port")
+    hosts=$(hosts $kafka_image ":$kafka_port")
     docker exec -it $name bash -c "/kafka/bin/kafka-console-producer.sh --broker-list $hosts --topic test"
 }
 
 kafka_consumer(){
-    hosts=$(get_hosts $zookeeper_image ":$zookeeper_port")
+    hosts=$(hosts $zookeeper_image ":$zookeeper_port")
     docker exec -it $name bash -c "/kafka/bin/kafka-console-consumer.sh --bootstrap-server $hosts --topic test --from-beginning"
 }
 
@@ -60,44 +62,65 @@ docker_network(){
     docker network create -d bridge $network
 }
 
-get_hosts(){
+hosts(){
     local image_ancestor=$1
     local append=$2
-    local hosts=$(get_container_name $image_ancestor | get_containers_ips | sed "s/$/$append,/")
+    local hosts=$(container_name $image_ancestor | containers_ips | sed "s/$/$append,/")
     hosts=$(echo $hosts | sed -e "s/\s//" -e "s/,$//")
     echo $hosts
 }
 
-get_zk_hosts(){
+zk_hosts_old(){
     local image_ancestor=$1
     local append=$2
-    local hosts=($(get_container_name $image_ancestor | get_containers_ips | sed "s/$/$append/"))
+    local hosts=($(container_name $image_ancestor | containers_ips | sed "s/$/$append/"))
     result=()
     for idx in "${!hosts[@]}";
     do
-        local zookeeper_id=$(get_container_label zookeeper zookeeper_id)
+        local zookeeper_id=$(container_label zookeeper $zookeeper_id_label)
         result+=("server.$zookeeper_id=${hosts[idx]}")
         #result+=("server.$idx=${hosts[idx]}")
     done
     echo "${result[@]}"
 }
 
-get_container_label(){
+zk_hosts(){
     local image_ancestor=$1
-    local container=$(get_container_name $image_ancestor)
+    local append=$2
+    local containers=($(container_name $image_ancestor ))
+    result=()
+    for idx in "${!containers[@]}";
+    do
+        cont_name=${containers[idx]}
+        zookeeper_id=$(container_label $cont_name zookeeper_id)
+        url=$(container_ip $cont_name)$append
+        result+=("server.$zookeeper_id=$url")
+        #result+=("server.$idx=${hosts[idx]}")
+    done
+    echo "${result[@]}"
+}
+
+container_label(){
+    local container=$1
     label=$2
     docker inspect --format "{{ index .Config.Labels \"$label\"}}" $container
 }
 
-get_containers_ips(){
-    while read input; do
-        docker inspect --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $input
-    done
-}
-
-get_container_name(){
+container_name(){
     input=$1
     docker ps --filter "ancestor=$input"  --format "{{.Names}}"
 }
+
+container_ip(){
+    container=$1
+    docker inspect --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $container
+}
+
+containers_ips(){
+    while read container; do
+        docker inspect --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $container
+    done
+}
+
 
 $@
