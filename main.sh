@@ -18,7 +18,7 @@ bash(){
 }
 
 zookeeper(){
-    #  ZOO_SERVERS: server.1=zoo1:2888:3888 server.2=zoo2:2888:3888 server.3=0.0.0.0:2888:3888
+    #  ZOO_SERVERS: server.1=172.17.0.2:2888:3888 server.2=172.17.0.3:2888:3888 server.3=0.0.0.0:2888:3888
     id=$(( ( RANDOM % 10 )  + 1 ))
     set -x
     docker run -it \
@@ -68,20 +68,6 @@ hosts(){
     local hosts=$(container_name $image_ancestor | containers_ips | sed "s/$/$append,/")
     hosts=$(echo $hosts | sed -e "s/\s//" -e "s/,$//")
     echo $hosts
-}
-
-zk_hosts_old(){
-    local image_ancestor=$1
-    local append=$2
-    local hosts=($(container_name $image_ancestor | containers_ips | sed "s/$/$append/"))
-    result=()
-    for idx in "${!hosts[@]}";
-    do
-        local zookeeper_id=$(container_label zookeeper $zookeeper_id_label)
-        result+=("server.$zookeeper_id=${hosts[idx]}")
-        #result+=("server.$idx=${hosts[idx]}")
-    done
-    echo "${result[@]}"
 }
 
 zk_hosts(){
