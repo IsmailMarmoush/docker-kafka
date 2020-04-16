@@ -1,11 +1,9 @@
 FROM openjdk:8-jre
 
-ARG KAFKA=kafka_2.11-2.0.0
-
 ENV KAFKA_HOME=/kafka
 ENV PATH=${PATH}:${KAFKA_HOME}/bin
 
-RUN wget -q http://www-eu.apache.org/dist/kafka/2.0.0/$KAFKA.tgz
-RUN tar xfz $KAFKA.tgz
-RUN mv $KAFKA $KAFKA_HOME
-RUN rm /$KAFKA.tgz
+RUN curl "https://downloads.apache.org/kafka/2.5.0/kafka_2.13-2.5.0.tgz" -o kafka.tgz
+RUN tar xfz kafka.tgz
+RUN rm /kafka.tgz
+RUN mv kafka_*/ $KAFKA_HOME
