@@ -20,6 +20,6 @@ jobs:
 
       - name: Push image
         run: |
-          docker tag image ${GITHUB_REPOSITORY}:latest
-          docker push ${GITHUB_REPOSITORY}
+          docker tag image ${GITHUB_REPOSITORY,,}:latest
+          docker push ${GITHUB_REPOSITORY,,}
 
