@@ -7,3 +7,4 @@ RUN curl "https://downloads.apache.org/kafka/2.8.0/kafka_2.13-2.8.0.tgz" -o kafk
 RUN tar xfz kafka.tgz
 RUN rm /kafka.tgz
 RUN mv kafka_*/ $KAFKA_HOME
+
